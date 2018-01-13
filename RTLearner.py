@@ -49,7 +49,6 @@ class RTLearner(object):
 
         # If there are <= leaf_size samples or all data in dataY are the same, return leaf
         if num_samples <= self.leaf_size or len(pd.unique(dataY)) == 1:
-            print ("dataY", dataY, num_samples, len(pd.unique(dataY)))
             return np.array([-1, dataY.mean(), np.nan, np.nan])
         else:
             # Randomly choose a feature to split on
@@ -57,6 +56,10 @@ class RTLearner(object):
 
             # Randomly choose two rows
             rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
+
+            # If the two rows are the same, reselect them until they are different
+            while rand_rows[0] == rand_rows[1]:
+                rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
 
             # Split the data by computing the mean of feature values of two random rows
             split_val = np.mean([dataX[rand_rows[0], rand_feat_i], 
