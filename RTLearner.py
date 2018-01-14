@@ -154,7 +154,7 @@ class RTLearner(object):
 
 
     def get_learner_info(self):
-        print ("Info about this Decision Tree Learner:")
+        print ("Info about this Random Tree Learner:")
         print ("leaf_size =", self.leaf_size)
         if self.tree is not None:
             print ("tree shape =", self.tree.shape)
@@ -179,21 +179,21 @@ if __name__=="__main__":
     y = np.array([4.000, 5.000, 6.000, 5.000, 3.000, 8.000, 7.000, 6.000])
 
     # Create a tree learner from given train X and y
-    dtl = RTLearner(verbose=True, leaf_size=1)
+    rtl = RTLearner(verbose=True, leaf_size=1)
     print ("\nAdd data")
-    dtl.addEvidence(x, y)
+    rtl.addEvidence(x, y)
 
     print ("\nCreate another tree learner from an existing tree")
-    dtl2 = RTLearner(tree=dtl.tree)
+    rtl2 = RTLearner(tree=rtl.tree)
 
-    # dtl2 should have the same tree as dtl
-    assert np.any(dtl.tree == dtl2.tree)
+    # rtl2 should have the same tree as rtl
+    assert np.any(rtl.tree == rtl2.tree)
 
-    dtl2.get_learner_info()
+    rtl2.get_learner_info()
 
-    # Modify the dtl2.tree and assert that this doesn't affect dtl.tree
-    dtl2.tree[0] = np.arange(dtl2.tree.shape[1])
-    assert np.any(dtl.tree != dtl2.tree)
+    # Modify the rtl2.tree and assert that this doesn't affect rtl.tree
+    rtl2.tree[0] = np.arange(rtl2.tree.shape[1])
+    assert np.any(rtl.tree != rtl2.tree)
 
     # Query with dummy data
-    dtl.query(np.array([[1, 2, 3], [0.2, 12, 12]]))
+    rtl.query(np.array([[1, 2, 3], [0.2, 12, 12]]))
