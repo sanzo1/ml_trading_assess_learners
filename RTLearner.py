@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 from copy import deepcopy
+from collections import Counter
 
 
 class RTLearner(object):
@@ -28,7 +29,7 @@ class RTLearner(object):
             self.get_learner_info()
         
 
-    def __build_tree(self, dataX, dataY):
+    def __build_tree(self, dataX, dataY, rootX=[], rootY=[]):
         """Builds the Random Tree recursively by randomly choosing a feature to split on. 
         The splitting value is the mean of feature values of two random rows
 
@@ -47,40 +48,45 @@ class RTLearner(object):
         num_samples = dataX.shape[0]
         num_feats = dataX.shape[1]
 
+        # If there is no sample left, return the most common value from the root of current node
+        if len(dataY) == 0:
+            return np.array([-1, Counter(rootY).most_common(1)[0][0], np.nan, np.nan])
+        
         # If there are <= leaf_size samples or all data in dataY are the same, return leaf
         if num_samples <= self.leaf_size or len(pd.unique(dataY)) == 1:
-            return np.array([-1, dataY.mean(), np.nan, np.nan])
-        else:
-            # Randomly choose a feature to split on
-            rand_feat_i = np.random.randint(0, num_feats)
+            return np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
+        
+        # Randomly choose a feature to split on
+        rand_feat_i = np.random.randint(0, num_feats)
 
-            # Randomly choose two rows
+        # Randomly choose two rows
+        rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
+
+        # If the two rows are the same, reselect them until they are different
+        while rand_rows[0] == rand_rows[1]:
             rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
 
-            # If the two rows are the same, reselect them until they are different
-            while rand_rows[0] == rand_rows[1]:
-                rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
+        # Split the data by computing the mean of feature values of two random rows
+        split_val = np.mean([dataX[rand_rows[0], rand_feat_i], 
+                            dataX[rand_rows[1], rand_feat_i]])
 
-            # Split the data by computing the mean of feature values of two random rows
-            split_val = np.mean([dataX[rand_rows[0], rand_feat_i], 
-                                dataX[rand_rows[1], rand_feat_i]])
+        # Logical arrays for indexing
+        left_index = dataX[:, rand_feat_i] <= split_val
+        right_index = dataX[:, rand_feat_i] > split_val
 
-            # Logical arrays for indexing
-            left_index = dataX[:, rand_feat_i] <= split_val
-            right_index = dataX[:, rand_feat_i] > split_val
+        # Build left and right branches and the root
+        lefttree = self.__build_tree(dataX[left_index], dataY[left_index], dataX, dataY)
+        righttree = self.__build_tree(dataX[right_index], dataY[right_index], dataX, dataY)
 
-            # Build left and right branches and the root
-            lefttree = self.__build_tree(dataX[left_index], dataY[left_index])
-            righttree = self.__build_tree(dataX[right_index], dataY[right_index])
+        # Set the starting row for the right subtree of the current root
+        if lefttree.ndim == 1:
+            righttree_start = 2 # The right subtree starts 2 rows down
+        elif lefttree.ndim > 1:
+            righttree_start = lefttree.shape[0] + 1
+        root = np.array([rand_feat_i, split_val, 1, righttree_start])
+        print ("left, right", dataX[left_index], dataX[right_index])
 
-            # Set the starting row for the right subtree of the current root
-            if lefttree.ndim == 1:
-                righttree_start = 2 # The right subtree starts 2 rows down
-            elif lefttree.ndim > 1:
-                righttree_start = lefttree.shape[0] + 1
-            root = np.array([rand_feat_i, split_val, 1, righttree_start])
-
-            return np.vstack((root, lefttree, righttree))
+        return np.vstack((root, lefttree, righttree))
         
 
     def __tree_search(self, point, row):
