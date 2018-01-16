@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 from copy import deepcopy
+from collections import Counter
+from operator import itemgetter
 
 
 class DTLearner(object):
@@ -16,15 +18,19 @@ class DTLearner(object):
             self.get_learner_info()
         
 
-    def __build_tree(self, dataX, dataY):
+    def __build_tree(self, dataX, dataY, rootX=[], rootY=[]):
         """Builds the Decision Tree recursively by choosing the best feature to split on and 
         the splitting value. The best feature has the highest absolute correlation with dataY. 
-        If all features have the same absolute correlation, choose the first feature. 
-        The splitting value is the median of the data according to the best feature
+        If all features have the same absolute correlation, choose the first feature. The 
+        splitting value is the median of the data according to the best feature. 
+        If the best feature doesn't split the data into two groups, choose the second best 
+        one and so on; if none of the features does, return leaf
 
         Parameters:
         dataX: A numpy ndarray of X values at each node
-        dataY: A numpy 1D array of Y training values at each node
+        dataY: A numpy 1D array of Y values at each node
+        rootX: A numpy ndarray of X values at the parent/root node of the current one
+        rootY: A numpy 1D array of Y values at the parent/root node of the current one
         
         Returns:
         tree: A numpy ndarray. Each row represents a node and four columns are feature indices 
@@ -36,21 +42,32 @@ class DTLearner(object):
         num_samples = dataX.shape[0]
         num_feats = dataX.shape[1]
 
+        # If there is no sample left, return the most common value from the root of current node
+        if num_samples == 0:
+            print ("empty")
+            return np.array([-1, Counter(rootY).most_common(1)[0][0], np.nan, np.nan])
+
         # If there are <= leaf_size samples or all data in dataY are the same, return leaf
         if num_samples <= self.leaf_size or len(pd.unique(dataY)) == 1:
-            return np.array([-1, dataY.mean(), np.nan, np.nan])
-        else:
-            # Initialize best feature index and best feature correlation
-            best_feat_i = 0
-            best_abs_corr = 0.0
+            return np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
+    
+        avail_feats_for_split = list(range(num_feats))
 
-            # Determine best feature to split on, using correlation between features and dataY
-            for feat_i in range(num_feats):
-                abs_corr = abs(pearsonr(dataX[:, feat_i], dataY)[0])
-                if abs_corr > best_abs_corr:
-                    best_abs_corr = abs_corr
-                    best_feat_i = feat_i
-            
+        # Get a list of tuples of features and their correlations with dataY
+        feats_corrs = []
+        for feat_i in range(num_feats):
+            abs_corr = abs(pearsonr(dataX[:, feat_i], dataY)[0])
+            feats_corrs.append((feat_i, abs_corr))
+        
+        # Sort the list in descending order by correlation
+        feats_corrs = sorted(feats_corrs, key=itemgetter(1), reverse=True)
+
+        # Choose the best feature, if any, by iterating over feats_corrs
+        feat_corr_i = 0
+        while len(avail_feats_for_split) > 0:
+            best_feat_i = feats_corrs[feat_corr_i][0]
+            best_abs_corr = feats_corrs[feat_corr_i][1]
+
             # Split the data according to the best feature
             split_val = np.median(dataX[:, best_feat_i])
 
@@ -58,19 +75,30 @@ class DTLearner(object):
             left_index = dataX[:, best_feat_i] <= split_val
             right_index = dataX[:, best_feat_i] > split_val
 
-            # Build left and right branches and the root
-            lefttree = self.__build_tree(dataX[left_index], dataY[left_index])
-            righttree = self.__build_tree(dataX[right_index], dataY[right_index])
-
-            # Set the starting row for the right subtree of the current root
-            if lefttree.ndim == 1:
-                righttree_start = 2 # The right subtree starts 2 rows down
-            elif lefttree.ndim > 1:
-                righttree_start = lefttree.shape[0] + 1
-            root = np.array([best_feat_i, split_val, 1, righttree_start])
-
-            return np.vstack((root, lefttree, righttree))
+            # If we can split the data into two groups, then break out of the loop            
+            if len(np.unique(left_index)) != 1:
+                break
+            
+            avail_feats_for_split.remove(best_feat_i)
+            feat_corr_i += 1
         
+        # If we complete the while loop and run out of features to split, return leaf
+        if len(avail_feats_for_split) == 0:
+            return np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
+
+        # Build left and right branches and the root                    
+        lefttree = self.__build_tree(dataX[left_index], dataY[left_index], dataX, dataY)
+        righttree = self.__build_tree(dataX[right_index], dataY[right_index], dataX, dataY)
+
+        # Set the starting row for the right subtree of the current root
+        if lefttree.ndim == 1:
+            righttree_start = 2 # The right subtree starts 2 rows down
+        elif lefttree.ndim > 1:
+            righttree_start = lefttree.shape[0] + 1
+        root = np.array([best_feat_i, split_val, 1, righttree_start])
+
+        return np.vstack((root, lefttree, righttree))
+    
 
     def __tree_search(self, point, row):
         """A private function to be used with query. It recursively searches 
