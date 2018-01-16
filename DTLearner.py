@@ -44,7 +44,6 @@ class DTLearner(object):
 
         # If there is no sample left, return the most common value from the root of current node
         if num_samples == 0:
-            print ("empty")
             return np.array([-1, Counter(rootY).most_common(1)[0][0], np.nan, np.nan])
 
         # If there are <= leaf_size samples or all data in dataY are the same, return leaf
@@ -150,6 +149,10 @@ class DTLearner(object):
         else:
             self.tree = np.vstack((self.tree, new_tree))
         
+        # If there is only a single row, expand tree to a numpy ndarray for consistency
+        if len(self.tree.shape) == 1:
+            self.tree = np.expand_dims(self.tree, axis=0)
+        
         if self.verbose:
             self.get_learner_info()
         
@@ -214,3 +217,20 @@ if __name__=="__main__":
 
     # Query with dummy data
     dtl.query(np.array([[1, 2, 3], [0.2, 12, 12]]))
+
+    # Another dataset to test that "If the best feature doesn't split the data into two
+    # groups, choose the second best one and so on; if none of the features does, return leaf"
+    x2 = np.array([
+     [  0.26,    0.63,   11.8  ],
+     [  0.26,    0.63,   11.8  ],
+     [  0.32,    0.78,   10.   ],
+     [  0.32,    0.78,   10.   ],
+     [  0.32,    0.78,   10.   ],
+     [  0.735,   0.57,    9.8  ],
+     [  0.26,    0.63,   11.8  ],
+     [  0.61,    0.63,    8.4  ]])
+        
+    y2 = np.array([ 8.,  8.,  6.,  6.,  6.,  5.,  8.,  3.])
+        
+    dtl = DTLearner(verbose=True)
+    dtl.addEvidence(x2, y2)
