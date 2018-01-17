@@ -11,6 +11,18 @@ from operator import itemgetter
 class DTLearner(object):
 
     def __init__(self, leaf_size=1, verbose=False, tree=None):
+        """Initalize a Decision Tree Learner
+
+        Parameters:
+        leaf_size: The maximum number of samples to be aggregated at a leaf
+        verbose: If True, information about the learner will be printed out
+        tree: If None, the learner instance has no data. If not None, tree is a numpy ndarray. 
+        Its columns are the features of data and its rows are the individual samples. The four 
+        columns are feature indices (index for a leaf is -1), splitting values (or Y values for
+        leaves), and starting rows, from the current root, for its left and right subtrees (if any)
+        
+        Returns: A instance of Decision Tree Learner
+        """
         self.leaf_size = leaf_size
         self.verbose = verbose
         self.tree = deepcopy(tree)
@@ -18,7 +30,7 @@ class DTLearner(object):
             self.get_learner_info()
         
 
-    def __build_tree(self, dataX, dataY, rootX=[], rootY=[]):
+    def __build_tree(self, dataX, dataY):
         """Builds the Decision Tree recursively by choosing the best feature to split on and 
         the splitting value. The best feature has the highest absolute correlation with dataY. 
         If all features have the same absolute correlation, choose the first feature. The 
@@ -29,8 +41,6 @@ class DTLearner(object):
         Parameters:
         dataX: A numpy ndarray of X values at each node
         dataY: A numpy 1D array of Y values at each node
-        rootX: A numpy ndarray of X values at the parent/root node of the current one
-        rootY: A numpy 1D array of Y values at the parent/root node of the current one
         
         Returns:
         tree: A numpy ndarray. Each row represents a node and four columns are feature indices 
@@ -42,13 +52,12 @@ class DTLearner(object):
         num_samples = dataX.shape[0]
         num_feats = dataX.shape[1]
 
-        # If there is no sample left, return the most common value from the root of current node
-        if num_samples == 0:
-            return np.array([-1, Counter(rootY).most_common(1)[0][0], np.nan, np.nan])
-
+        # Leaf value is the most common dataY
+        leaf = np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
+        
         # If there are <= leaf_size samples or all data in dataY are the same, return leaf
         if num_samples <= self.leaf_size or len(pd.unique(dataY)) == 1:
-            return np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
+            return leaf
     
         avail_feats_for_split = list(range(num_feats))
 
@@ -83,11 +92,11 @@ class DTLearner(object):
         
         # If we complete the while loop and run out of features to split, return leaf
         if len(avail_feats_for_split) == 0:
-            return np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
+            return leaf
 
         # Build left and right branches and the root                    
-        lefttree = self.__build_tree(dataX[left_index], dataY[left_index], dataX, dataY)
-        righttree = self.__build_tree(dataX[right_index], dataY[right_index], dataX, dataY)
+        lefttree = self.__build_tree(dataX[left_index], dataY[left_index])
+        righttree = self.__build_tree(dataX[right_index], dataY[right_index])
 
         # Set the starting row for the right subtree of the current root
         if lefttree.ndim == 1:
@@ -174,17 +183,18 @@ class DTLearner(object):
 
 
     def get_learner_info(self):
-        print ("Info about this Decision Tree Learner:")
         print ("leaf_size =", self.leaf_size)
         if self.tree is not None:
             print ("tree shape =", self.tree.shape)
             print ("tree as a matrix:")
             # Create a dataframe from tree for a user-friendly view
-            df_tree = pd.DataFrame(self.tree, columns=["factor", "split_val", "left", "right"])
+            df_tree = pd.DataFrame(self.tree, 
+                columns=["factor", "split_val", "left", "right"])
             df_tree.index.name = "node"
             print (df_tree)
         else:
             print ("Tree has no data")
+        print ("")
 
 
 if __name__=="__main__":
@@ -220,6 +230,7 @@ if __name__=="__main__":
 
     # Another dataset to test that "If the best feature doesn't split the data into two
     # groups, choose the second best one and so on; if none of the features does, return leaf"
+    print ("Another dataset for testing")
     x2 = np.array([
      [  0.26,    0.63,   11.8  ],
      [  0.26,    0.63,   11.8  ],
