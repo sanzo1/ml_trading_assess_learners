@@ -13,7 +13,7 @@ class RTLearner(object):
         """Initalize a Random Tree Learner
 
         Parameters:
-        leaf_size: The maximum number of samples to be aggregated at a leaf. While the tree is 
+        leaf_size: The maximum number of samples to be aggregated at a leaf. 
         verbose: If True, information about the learner will be printed out
         tree: If None, the learner instance has no data. If not None, tree is a numpy ndarray. 
         Its columns are the features of data and its rows are the individual samples. The four 
@@ -31,11 +31,14 @@ class RTLearner(object):
 
     def __build_tree(self, dataX, dataY, rootX=[], rootY=[]):
         """Builds the Random Tree recursively by randomly choosing a feature to split on. 
-        The splitting value is the mean of feature values of two random rows
+        The splitting value is the mean of feature values of two random rows. If none of the 
+        features can split the data into two groups, return leaf
 
         Parameters:
         dataX: A numpy ndarray of X values at each node
-        dataY: A numpy 1D array of Y training values at each node
+        dataY: A numpy 1D array of Y values at each node
+        rootX: A numpy ndarray of X values at the parent/root node of the current one
+        rootY: A numpy 1D array of Y values at the parent/root node of the current one
         
         Returns:
         tree: A numpy ndarray. Its columns are the features of data and its rows are the 
@@ -49,30 +52,44 @@ class RTLearner(object):
         num_feats = dataX.shape[1]
 
         # If there is no sample left, return the most common value from the root of current node
-        if len(dataY) == 0:
+        if num_samples == 0:
             return np.array([-1, Counter(rootY).most_common(1)[0][0], np.nan, np.nan])
         
         # If there are <= leaf_size samples or all data in dataY are the same, return leaf
-        if num_samples <= self.leaf_size or len(pd.unique(dataY)) == 1:
+        if num_samples <= self.leaf_size or len(np.unique(dataY)) == 1:
             return np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
         
-        # Randomly choose a feature to split on
-        rand_feat_i = np.random.randint(0, num_feats)
+        avail_feats_for_split = list(range(num_feats))
 
-        # Randomly choose two rows
-        rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
+        # If a randomly-chosen feature can't split the data, choose another one randomly
+        while len(avail_feats_for_split) > 0:
+            # Randomly choose a feature to split on
+            rand_feat_i = np.random.choice(avail_feats_for_split)
 
-        # If the two rows are the same, reselect them until they are different
-        while rand_rows[0] == rand_rows[1]:
+            # Randomly choose two rows
             rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
+            
+            # If the two rows are the same, reselect them until they are different
+            while rand_rows[0] == rand_rows[1] and num_samples > 1:
+                rand_rows = [np.random.randint(0, num_samples), np.random.randint(0, num_samples)]
 
-        # Split the data by computing the mean of feature values of two random rows
-        split_val = np.mean([dataX[rand_rows[0], rand_feat_i], 
+            # Split the data by computing the mean of feature values of two random rows
+            split_val = np.mean([dataX[rand_rows[0], rand_feat_i], 
                             dataX[rand_rows[1], rand_feat_i]])
 
-        # Logical arrays for indexing
-        left_index = dataX[:, rand_feat_i] <= split_val
-        right_index = dataX[:, rand_feat_i] > split_val
+            # Logical arrays for indexing
+            left_index = dataX[:, rand_feat_i] <= split_val
+            right_index = dataX[:, rand_feat_i] > split_val
+
+            # If we can split the data into two groups, then break out of the loop            
+            if len(np.unique(left_index)) != 1:
+                break
+            
+            avail_feats_for_split.remove(rand_feat_i)
+        
+        # If we complete the while loop and run out of features to split, return leaf
+        if len(avail_feats_for_split) == 0:
+            return np.array([-1, Counter(dataY).most_common(1)[0][0], np.nan, np.nan])
 
         # Build left and right branches and the root
         lefttree = self.__build_tree(dataX[left_index], dataY[left_index], dataX, dataY)
@@ -84,7 +101,6 @@ class RTLearner(object):
         elif lefttree.ndim > 1:
             righttree_start = lefttree.shape[0] + 1
         root = np.array([rand_feat_i, split_val, 1, righttree_start])
-        print ("left, right", dataX[left_index], dataX[right_index])
 
         return np.vstack((root, lefttree, righttree))
         
@@ -138,6 +154,10 @@ class RTLearner(object):
         # Otherwise, append new_tree to self.tree
         else:
             self.tree = np.vstack((self.tree, new_tree))
+
+        # If there is only a single row, expand tree to a numpy ndarray for consistency
+        if len(self.tree.shape) == 1:
+            self.tree = np.expand_dims(self.tree, axis=0)
         
         if self.verbose:
             self.get_learner_info()
@@ -203,3 +223,20 @@ if __name__=="__main__":
 
     # Query with dummy data
     rtl.query(np.array([[1, 2, 3], [0.2, 12, 12]]))
+
+    # Another dataset to test that "If the best feature doesn't split the data into two
+    # groups, choose the second best one and so on; if none of the features does, return leaf"
+    x2 = np.array([
+     [  0.26,    0.63,   11.8  ],
+     [  0.26,    0.63,   11.8  ],
+     [  0.32,    0.78,   10.   ],
+     [  0.32,    0.78,   10.   ],
+     [  0.32,    0.78,   10.   ],
+     [  0.735,   0.57,    9.8  ],
+     [  0.26,    0.63,   11.8  ],
+     [  0.61,    0.63,    8.4  ]])
+        
+    y2 = np.array([ 8.,  8.,  6.,  6.,  6.,  5.,  8.,  3.])
+        
+    rtl3 = RTLearner(verbose=True)
+    rtl3.addEvidence(x2, y2)
