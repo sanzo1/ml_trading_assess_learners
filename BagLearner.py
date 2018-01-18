@@ -64,3 +64,18 @@ class BagLearner(object):
         return np.mean(preds, axis=0)
 
 
+    def get_learner_info(self):
+        """Print out data for this BagLearner"""
+        learner_name = str(type(self.learners[0]))[8:-2]
+        print ("This BagLearner is made up of {} {}:".
+            format(self.bags, learner_name))
+
+        print ("kwargs =", self.kwargs)
+        print ("boost =", self.boost)
+
+        # Print out information for each learner within BagLearner
+        for i in range(1, self.bags + 1):
+            print (learner_name, "#{}:".format(i)); 
+            self.learners[i-1].get_learner_info() 
+
+
