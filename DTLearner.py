@@ -1,4 +1,4 @@
-"""A simple wrapper for Decision Tree regression"""
+"""Implement a Decision Tree Learner"""
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,7 @@ class DTLearner(object):
         columns are feature indices (index for a leaf is -1), splitting values (or Y values for
         leaves), and starting rows, from the current root, for its left and right subtrees (if any)
         
-        Returns: A instance of Decision Tree Learner
+        Returns: An instance of Decision Tree Learner
         """
         self.leaf_size = leaf_size
         self.verbose = verbose
@@ -65,6 +65,8 @@ class DTLearner(object):
         feats_corrs = []
         for feat_i in range(num_feats):
             abs_corr = abs(pearsonr(dataX[:, feat_i], dataY)[0])
+            if np.isnan(abs_corr):
+                abs_corr = 0.0
             feats_corrs.append((feat_i, abs_corr))
         
         # Sort the list in descending order by correlation
@@ -183,6 +185,7 @@ class DTLearner(object):
 
 
     def get_learner_info(self):
+        """Print out data for this learner"""
         print ("leaf_size =", self.leaf_size)
         if self.tree is not None:
             print ("tree shape =", self.tree.shape)
