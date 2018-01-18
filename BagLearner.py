@@ -1,8 +1,7 @@
-"""A wrapper for Bag Learner"""
+"""Implement Bag Learner"""
+# TODO: Implement Boosting
 
 import numpy as np
-import pandas as pd
-from copy import deepcopy
 import LinRegLearner, DTLearner, RTLearner
 
 
@@ -32,4 +31,36 @@ class BagLearner(object):
             self.get_learner_info()
 
         
-    
+    def addEvidence(self, dataX, dataY):
+        """Add training data to learner
+
+        Parameters:
+        dataX: A numpy ndarray of X values to add
+        dataY: A numpy 1D array of Y values to add
+
+        Returns: Updated individual learners in BagLearner
+        """
+        # Sample the data with replacement
+        num_samples = dataX.shape[0]
+        for learner in self.learners:
+            idx = np.random.choice(num_samples, num_samples)
+            bagX = dataX[idx]
+            bagY = dataY[idx]
+            learner.addEvidence(bagX, bagY)
+        if self.verbose:
+            self.get_learner_info()
+        
+        
+    def query(self, points):
+        """Estimates a set of test points given the model we built
+        
+        Parameters:
+        points: A numpy ndarray of test queries
+
+        Returns: 
+        preds: A numpy 1D array of the estimated values
+        """
+        preds = np.array([learner.query(points) for learner in self.learners])
+        return np.mean(preds, axis=0)
+
+
