@@ -104,6 +104,7 @@ def train_test_learner(learner_arg, num_iterations=1, max_leaf_size=None,
 
 def plot_results(in_sample, out_of_sample, title, xlabel, ylabel, 
     legend_loc="lower right", xaxis_length=1):
+    
     """Plot the results, e.g. RMSEs or correlations from training and testing a learner
     
     Parameters:
@@ -126,59 +127,3 @@ def plot_results(in_sample, out_of_sample, title, xlabel, ylabel,
     plt.legend(loc=legend_loc)
     plt.title(title)
     plt.show()
-
-
-"""
-if __name__=="__main__":
-    trainX, trainY, testX, testY = process_data("Data/Istanbul.csv", train_size=0.6)
-    
-    # Train and evaluate a Decision Tree Learner
-    max_leaf_size = 20
-    num_iterations = 10
-    
-    RMSEin_mean, RMSEout_mean, CORRin_mean, CORRout_mean = train_test_learner(
-        dtl.DTLearner, max_leaf_size=max_leaf_size, num_iterations=num_iterations)
-
-    plot_results(RMSEin_mean, RMSEout_mean, "RMSEs for DTLearner by leaf size", 
-        "Leaf size", "Root mean squared errors", xaxis_length=max_leaf_size)
-    plot_results(CORRin_mean, CORRout_mean, "Correlations (actual vs. predicted) for DTLearner by leaf size", 
-        "Leaf size", "Correlations", "upper right", max_leaf_size)
-    
-    
-    # Train and evaluate a Random Tree Learner
-    max_leaf_size = 20
-    num_iterations = 10
-    
-    RMSEin_mean, RMSEout_mean, CORRin_mean, CORRout_mean = train_test_learner(
-        rtl.RTLearner, max_leaf_size=max_leaf_size, num_iterations=num_iterations)
-
-    plot_results(RMSEin_mean, RMSEout_mean, "RMSEs for RTLearner by leaf size", 
-        "Leaf size", "Root mean squared errors", xaxis_length=max_leaf_size)
-    plot_results(CORRin_mean, CORRout_mean, "Correlations (actual vs. predicted) for RTLearner by leaf size", 
-        "Leaf size", "Correlations", "upper right", max_leaf_size)
-    
-    # Train and evaluate a Bag Learner by leaf size
-    max_leaf_size = 20
-    num_iterations = 1
-    
-    RMSEin_mean, RMSEout_mean, CORRin_mean, CORRout_mean = train_test_learner(bl.BagLearner, 
-        max_leaf_size=max_leaf_size, num_iterations=num_iterations, learner=dtl.DTLearner)
-
-    plot_results(RMSEin_mean, RMSEout_mean, "RMSEs for BagLearner by leaf size", 
-        "Leaf size", "Root mean squared errors", xaxis_length=max_leaf_size)
-    plot_results(CORRin_mean, CORRout_mean, "Correlations (actual vs. predicted) for BagLearner by leaf size", 
-        "Leaf size", "Correlations", "upper right", max_leaf_size)
-
-    
-    # Train and evaluate a Bag Learner by bag size
-    max_bag_size = 20
-    num_iterations = 1
-    
-    RMSEin_mean, RMSEout_mean, CORRin_mean, CORRout_mean = train_test_learner(bl.BagLearner, 
-        num_iterations=num_iterations, learner=dtl.DTLearner)
-
-    plot_results(RMSEin_mean, RMSEout_mean, "RMSEs for BagLearner by bag size", 
-        "Bag size", "Root mean squared errors", xaxis_length=max_bag_size)
-    plot_results(CORRin_mean, CORRout_mean, "Correlations (actual vs. predicted) for BagLearner by bag size", 
-        "Bag size", "Correlations", "upper right", max_bag_size)
-"""
