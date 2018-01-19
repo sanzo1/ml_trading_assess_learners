@@ -34,12 +34,13 @@ def process_data(filename, train_size=0.6):
     return trainX, trainY, testX, testY
 
 
-def train_test_learner(learner_arg, num_iterations=1, max_leaf_size=None, 
-    max_bag_size=None, **kwargs):
+def train_test_learner(trainX, trainY, testX, testY, learner_arg, num_iterations=1, 
+    max_leaf_size=None, max_bag_size=None, **kwargs):
     
     """Train and test a learner
 
     Parameters:
+    trainX, trainY, testX, testY: Training and test data
     learner_arg: A DTLearner, RTLearner or BagLearner
     num_iterations: Number of times we train and test the data
     max_leaf_size: The max value of the leaf size range on which we train a tree learner
@@ -48,11 +49,11 @@ def train_test_learner(learner_arg, num_iterations=1, max_leaf_size=None,
     
     Returns:
     RMSEin_mean: A numpy 1D array of means of root mean square errors (RMSEs) 
-                for in sample data
-    RMSEout_mean: A numpy 1D array of means of RMSEs for out of sample data
+                for in-sample data
+    RMSEout_mean: A numpy 1D array of means of RMSEs for out-of-sample data
     CORRin_mean: A numpy 1D array of medians of correlations 
-                    between predicted and actual results for in sample data
-    CORRout_mean: A numpy 1D array of medians of correlations for out of sample data
+                    between predicted and actual results for in-sample data
+    CORRout_mean: A numpy 1D array of medians of correlations for out-of-sample data
     """
 
     # Make sure that either of these variables is not None
@@ -62,11 +63,11 @@ def train_test_learner(learner_arg, num_iterations=1, max_leaf_size=None,
         return np.zeros((1, 1)), np.zeros((1, 1)), np.zeros((1, 1)), np.zeros((1, 1))
 
     max_val = max_leaf_size or max_bag_size
-    # Initialize two ndarrays for in sample and out of sample root mean squared errors
+    # Initialize two ndarrays for in-sample and out-of-sample root mean squared errors
     RMSEin = np.zeros((max_val, num_iterations))
     RMSEout = np.zeros((max_val, num_iterations))
 
-    # Initialize two ndarrays for in sample and out of sample correlations
+    # Initialize two ndarrays for in-sample and out-of-sample correlations
     CORRin = np.zeros((max_val, num_iterations))
     CORRout = np.zeros((max_val, num_iterations))
 
@@ -77,14 +78,14 @@ def train_test_learner(learner_arg, num_iterations=1, max_leaf_size=None,
             learner = learner_arg(leaf_size=i, **kwargs)
             learner.addEvidence(trainX, trainY)
 
-            # Evaluate in sample
+            # Evaluate in-sample
             predY = learner.query(trainX)
             rmse = math.sqrt(((trainY - predY) ** 2).sum()/trainY.shape[0])
             RMSEin[i, j] = rmse
             c = np.corrcoef(predY, y=trainY)
             CORRin[i, j] = c[0, 1]
 
-            # Evaluate out of sample
+            # Evaluate out-of-sample
             predY = learner.query(testX)
             rmse = math.sqrt(((testY - predY) ** 2).sum()/testY.shape[0])
             RMSEout[i, j] = rmse
@@ -108,8 +109,8 @@ def plot_results(in_sample, out_of_sample, title, xlabel, ylabel,
     """Plot the results, e.g. RMSEs or correlations from training and testing a learner
     
     Parameters:
-    in_sample: A numpy 1D array of in sample data
-    out_of_sample: A numpy 1D array of out of sample data
+    in_sample: A numpy 1D array of in-sample data
+    out_of_sample: A numpy 1D array of out-of-sample data
     title: The chart title
     xlabel: x-axis label
     ylabel: y-axis label
@@ -120,8 +121,8 @@ def plot_results(in_sample, out_of_sample, title, xlabel, ylabel,
     """
 
     xaxis = np.arange(1, xaxis_length + 1)
-    plt.plot(xaxis, in_sample, label="in sample", linewidth=2.0)
-    plt.plot(xaxis, out_of_sample, label="out of sample", linewidth=2.0)
+    plt.plot(xaxis, in_sample, label="in-sample", linewidth=2.0)
+    plt.plot(xaxis, out_of_sample, label="out-of-sample", linewidth=2.0)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.legend(loc=legend_loc)
