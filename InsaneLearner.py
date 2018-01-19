@@ -58,3 +58,15 @@ class InsaneLearner(object):
         return np.mean(preds, axis=0)
 
 
+    def get_learner_info(self):
+        """Print out data for this InsaneLearner"""
+        bag_learner_name = str(type(self.bag_learners[0]))[8:-2]
+        print ("This InsaneLearner is made up of {} {}:".
+            format(self.num_bag_learners, bag_learner_name))
+        print ("kwargs =", self.kwargs)
+
+        # Print out information for each learner within InsaneLearner
+        for i in range(1, self.num_bag_learners + 1):
+            print (bag_learner_name, "#{}:".format(i)); 
+            self.bag_learners[i-1].get_learner_info() 
+
