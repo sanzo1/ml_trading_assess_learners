@@ -30,3 +30,31 @@ class InsaneLearner(object):
             self.get_learner_info()
 
         
+    def addEvidence(self, dataX, dataY):
+        """Add training data to learner
+
+        Parameters:
+        dataX: A numpy ndarray of X values to add
+        dataY: A numpy 1D array of Y values to add
+
+        Returns: Updated individual bag learners within InsaneLearner
+        """
+        for bag_learner in self.bag_learners:
+            bag_learner.addEvidence(dataX, dataY)
+        if self.verbose:
+            self.get_learner_info()
+        
+        
+    def query(self, points):
+        """Estimates a set of test points given the model we built
+        
+        Parameters:
+        points: A numpy ndarray of test queries
+
+        Returns: 
+        preds: A numpy 1D array of the estimated values
+        """
+        preds = np.array([learner.query(points) for learner in self.bag_learners])
+        return np.mean(preds, axis=0)
+
+
