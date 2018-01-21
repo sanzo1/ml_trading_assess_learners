@@ -72,10 +72,13 @@ def train_test_learner(trainX, trainY, testX, testY, learner_arg, num_iterations
     CORRout = np.zeros((max_val, num_iterations))
 
     # Train the learner and record RMSEs
-    for i in range(max_val):
+    for i in range(1, max_val):
         for j in range(num_iterations):
             # Create a learner and train it
-            learner = learner_arg(leaf_size=i, **kwargs)
+            if max_leaf_size is not None:
+                learner = learner_arg(leaf_size=i, **kwargs)
+            elif max_bag_size is not None:
+                learner = learner_arg(bags=i, **kwargs)
             learner.addEvidence(trainX, trainY)
 
             # Evaluate in-sample
